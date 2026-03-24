@@ -1,0 +1,15 @@
+node_modules
+.env
+dist
+dist-electron
+temp
+ts_errors.txt
+*.log
+python/venv
+__pycache__
+.DS_Store
+release
+temp
+cherrynet/training/user_training.json
+cherrynet/memory/
+cherrynet/plans/

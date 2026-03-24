@@ -1,0 +1,13 @@
+google-genai
+fastapi
+uvicorn
+psutil
+python-dotenv
+websockets
+httpx
+numpy
+pyautogui
+pygetwindow
+pynput
+mss
+opencv-python

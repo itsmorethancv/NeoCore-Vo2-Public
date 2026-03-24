@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "name": "NeoCore-o2",
+  "primary_ai": "neo",
+  "model": "deepseek-v3.2:cloud",
+  "council_members": [
+    "neo",
+    "ultron",
+    "vision"
+  ],
+  "hud": {
+    "opacity": 0.85,
+    "transparent": true,
+    "always_on_top": true,
+    "position": "overlay"
+  },
+  "memory": {
+    "location": "cherrynet/memory-logs",
+    "enabled": true,
+    "max_entries": 10000
+  },
+  "llm_provider": "ollama",
+  "ollama": {
+    "base_url": "http://127.0.0.1:11434",
+    "model": "deepseek-v3.2:cloud",
+    "timeout_seconds": 120,
+    "keep_alive": "5m",
+    "available_models": [
+      {
+        "name": "GPT-OSS 120B Cloud",
+        "id": "gpt-oss:120b-cloud",
+        "description": "Large open-source model with strong reasoning"
+      },
+      {
+        "name": "DeepSeek V3.2 Cloud",
+        "id": "deepseek-v3.2:cloud",
+        "description": "Advanced DeepSeek model optimized for complex tasks"
+      }
+    ]
+  },
+  "features": {
+    "speech_recognition": true,
+    "text_to_speech": true,
+    "ai_council": true,
+    "lightyear": true,
+    "redprint": true
+  }
+}

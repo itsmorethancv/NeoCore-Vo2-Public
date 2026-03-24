@@ -1,0 +1,1585 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap');
+
+:root {
+  --neon-cyan: #00f2ff;
+  --neon-cyan-glow: rgba(0, 242, 255, 0.5);
+  --neon-cyan-dim: #00a8b3;
+  --glass-bg: rgba(10, 25, 41, 0.6);
+  --glass-border: rgba(0, 242, 255, 0.2);
+  --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  --text-primary: #e0f7ff;
+  --text-secondary: rgba(224, 247, 255, 0.6);
+  --accent-warning: #ff3d00;
+  --accent-success: #00e676;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Share Tech Mono', monospace;
+  background: transparent;
+  color: var(--text-primary);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  user-select: none;
+  /* Keep base select as none */
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+.hud-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 450px;
+  grid-template-rows: 1fr auto;
+  gap: 32px;
+  padding: 80px 80px 80px 300px;
+  /* Shifted 100px left as requested (from 400px to 300px) */
+  background: radial-gradient(circle at center, rgba(0, 20, 40, 0.1) 0%, transparent 80%);
+}
+
+/* Glassmorphism Utility */
+.glass-panel {
+  background: rgba(10, 25, 41, 0.82);
+  /* Replaced backdrop-filter: blur(20px) — expensive on transparent Electron windows */
+  border: 1px solid rgba(0, 242, 255, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0, 242, 255, 0.05), transparent);
+  pointer-events: none;
+}
+
+/* Chat & Log text should be selectable */
+.chat-message,
+.log-entry {
+  user-select: text !important;
+}
+
+/* Left Panel - Visuals */
+.left-panel {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 20px;
+}
+
+.neural-circle-container {
+  width: 600px;
+  /* Increased size to avoid crowding overlays */
+  height: 600px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+.ai-status-box {
+  margin-top: 40px;
+  padding: 12px 24px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border: 1px solid var(--neon-cyan);
+  background: rgba(0, 242, 255, 0.05);
+  box-shadow: 0 0 15px var(--neon-cyan-glow);
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-success);
+  box-shadow: 0 0 10px var(--accent-success);
+  animation: pulse-status 1.5s infinite;
+}
+
+.status-indicator.thinking {
+  background: var(--accent-warning);
+  box-shadow: 0 0 10px var(--accent-warning);
+}
+
+@keyframes pulse-status {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Tactical Terminal - Top Left */
+.tactical-terminal {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  font-family: 'Share Tech Mono', monospace;
+  background: rgba(0, 20, 40, 0.4);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  transition: opacity 0.3s ease, transform 0.3s ease, width 0.3s ease, height 0.3s ease, left 0.3s ease, top 0.3s ease;
+}
+
+.tactical-terminal.is-dragging,
+.tactical-terminal.is-resizing {
+  transition: none !important;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--neon-cyan);
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+  cursor: grab;
+  user-select: none;
+}
+
+.tactical-terminal.is-dragging .terminal-header {
+  cursor: grabbing;
+}
+
+.terminal-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-status {
+  color: var(--accent-success);
+  font-weight: bold;
+}
+
+.terminal-output {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal-prompt-prefix {
+  color: var(--neon-cyan);
+  font-weight: bold;
+}
+
+.terminal-input-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 8px;
+}
+
+.terminal-cursor {
+  color: var(--neon-cyan);
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.terminal-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-family: inherit;
+  font-size: 11px;
+  width: 100%;
+}
+
+.terminal-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.scanline {
+  width: 100%;
+  height: 2px;
+  background: rgba(0, 242, 255, 0.05);
+  position: absolute;
+  top: -2px;
+  animation: scan 4s linear infinite;
+  will-change: top;
+  transform: translateZ(0);
+}
+
+@keyframes scan {
+  from {
+    top: -2px;
+  }
+
+  to {
+    top: 100%;
+  }
+}
+
+/* Right Panel - Chat & Logs */
+.right-panel {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: grid;
+  grid-template-rows: 1fr 200px auto;
+  gap: 20px;
+  height: 100%;
+}
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.chat-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  color: var(--neon-cyan);
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 10px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 8px;
+}
+
+.chat-message {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 95%;
+  animation: slide-in 0.3s ease-out;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.chat-message p {
+  margin-bottom: 8px;
+}
+
+.chat-message p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message strong {
+  color: var(--neon-cyan);
+  font-weight: 700;
+  text-shadow: 0 0 5px var(--neon-cyan-glow);
+}
+
+.chat-message ul,
+.chat-message ol {
+  margin-left: 20px;
+  margin-bottom: 8px;
+}
+
+.chat-message li {
+  margin-bottom: 4px;
+}
+
+.chat-message code {
+  background: rgba(0, 242, 255, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--neon-cyan);
+  border: 1px solid var(--glass-border);
+}
+
+.chat-message pre {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  border-radius: 8px;
+  margin: 10px 0;
+  overflow-x: auto;
+  border: 1px solid var(--glass-border);
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message.user {
+  align-self: flex-end;
+  background: rgba(0, 242, 255, 0.1);
+  border-right: 2px solid var(--neon-cyan);
+  color: var(--text-primary);
+}
+
+.chat-message.ai {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 2px solid var(--accent-success);
+  color: var(--text-primary);
+}
+
+.chat-input-container {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+}
+
+.chat-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--text-primary);
+  font-family: 'Share Tech Mono', monospace;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.chat-input:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+.send-button {
+  background: var(--neon-cyan);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 0 20px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.send-button:hover {
+  background: white;
+  box-shadow: 0 0 15px white;
+}
+
+.command-log {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.log-header {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.log-entry {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  gap: 10px;
+}
+
+.log-timestamp {
+  color: var(--neon-cyan-dim);
+  font-size: 10px;
+}
+
+/* Controls */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.control-btn {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+}
+
+.control-btn:hover {
+  background: var(--neon-cyan);
+  color: #000;
+  border-color: var(--neon-cyan);
+}
+
+/* Metrics Overlays in Left Panel */
+.data-callout {
+  position: absolute;
+  padding: 12px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  color: var(--neon-cyan);
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.callout-cpu {
+  top: 15%;
+  /* Adjusted from 10% */
+  left: 20px;
+  /* Reduced inset from 0 */
+}
+
+.callout-ram {
+  top: 15%;
+  /* Adjusted from 10% */
+  right: 20px;
+  /* Reduced inset from 0 */
+}
+
+.callout-disk {
+  bottom: 10%;
+  left: 0;
+}
+
+.callout-network {
+  bottom: 10%;
+  right: 0;
+}
+
+/* Dynamic Widgets */
+.dynamic-widget {
+  position: absolute;
+  width: 300px;
+  min-height: 200px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  cursor: default;
+  animation: widget-appear 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dynamic-widget.sublet-widget {
+  border: 1px solid rgba(255, 58, 58, 0.6);
+  box-shadow: 0 0 24px rgba(255, 58, 58, 0.35), 0 0 48px rgba(255, 0, 0, 0.2);
+}
+
+.dynamic-widget.sublet-widget .widget-header {
+  background: linear-gradient(90deg, rgba(110, 0, 0, 0.65), rgba(180, 20, 20, 0.5));
+  border-bottom: 1px solid rgba(255, 76, 76, 0.5);
+}
+
+.dynamic-widget.sublet-widget .widget-title {
+  color: #ff8a8a;
+  text-shadow: 0 0 8px rgba(255, 60, 60, 0.7);
+}
+
+.dynamic-widget.sublet-widget .widget-text {
+  color: #ffd6d6;
+  text-align: left;
+  width: 100%;
+}
+
+@keyframes widget-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.widget-header {
+  padding: 10px 15px;
+  background: rgba(0, 242, 255, 0.1);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+}
+
+.widget-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  color: var(--neon-cyan);
+  letter-spacing: 1px;
+}
+
+.widget-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.widget-close:hover {
+  color: var(--accent-warning);
+}
+
+.widget-content {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.widget-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: center;
+  white-space: pre-wrap;
+}
+
+.widget-gauge-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.gauge-outer {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gauge-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-cyan-dim), var(--neon-cyan));
+  box-shadow: 0 0 10px var(--neon-cyan-glow);
+  transition: width 0.5s ease-out;
+}
+
+.gauge-val {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 24px;
+  color: var(--neon-cyan);
+}
+
+.widget-graph-container {
+  width: 100%;
+  height: 100px;
+  position: relative;
+}
+
+.widget-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.graph-path {
+  filter: drop-shadow(0 0 5px var(--neon-cyan-glow));
+}
+
+.widget-data-label {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.widget-footer {
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: var(--accent-warning);
+}
+
+/* Listening Glow */
+.glow-listening {
+  filter: drop-shadow(0 0 20px var(--neon-cyan-glow));
+  animation: pulse-listening 1.5s infinite;
+}
+
+@keyframes pulse-listening {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px var(--neon-cyan-glow));
+  }
+
+  50% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 30px var(--neon-cyan-glow));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px var(--neon-cyan-glow));
+  }
+}
+
+.listening-label {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  color: var(--neon-cyan);
+  background: rgba(0, 242, 255, 0.1);
+  padding: 4px 12px;
+  border: 1px solid var(--neon-cyan);
+  border-radius: 4px;
+  letter-spacing: 2px;
+  animation: blink 1s infinite;
+}
+
+/* Settings Overlay */
+.settings-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  animation: slide-up 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 15px;
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--neon-cyan);
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.setting-row label {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+.hud-select {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  width: 200px;
+}
+
+.settings-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-top: 30px;
+  opacity: 0.7;
+}
+
+.settings-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Transcription Ticker */
+.transcription-ticker {
+  position: absolute;
+  top: 8px;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 25px;
+  min-width: 450px;
+  border-bottom: 2px solid var(--glass-border);
+  animation: slide-up 0.3s ease-out;
+  z-index: 3000;
+  opacity: 0.65;
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+
+.hud-container.sublet-control-active {
+  outline: 2px solid rgba(255, 40, 40, 0.45);
+  box-shadow: inset 0 0 120px rgba(180, 0, 0, 0.22);
+}
+
+.hud-container.ultron-control-active {
+  outline: 2px solid rgba(255, 30, 30, 0.8);
+  box-shadow: inset 0 0 180px rgba(255, 0, 0, 0.35);
+}
+
+.hud-container.sublet-control-active * {
+  cursor: crosshair !important;
+}
+
+.sublet-control-badge {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(130, 0, 0, 0.72);
+  border: 1px solid rgba(255, 95, 95, 0.8);
+  color: #ffd9d9;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  padding: 8px 14px;
+  z-index: 2000;
+  box-shadow: 0 0 16px rgba(255, 30, 30, 0.45);
+}
+
+.sublet-control-cursor {
+  position: fixed;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 80, 80, 0.95);
+  box-shadow: 0 0 12px rgba(255, 20, 20, 0.9);
+  pointer-events: none;
+  z-index: 2500;
+  transform: translate(-50%, -50%);
+}
+
+.sublet-control-cursor::before,
+.sublet-control-cursor::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 70, 70, 0.95);
+  box-shadow: 0 0 8px rgba(255, 30, 30, 0.8);
+}
+
+.sublet-control-cursor::before {
+  left: 50%;
+  top: -8px;
+  width: 2px;
+  height: 30px;
+  transform: translateX(-50%);
+}
+
+.sublet-control-cursor::after {
+  top: 50%;
+  left: -8px;
+  width: 30px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+/* ============================================================
+   MacOS TRAFFIC LIGHTS
+   ============================================================ */
+.macos-traffic-lights {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.macos-traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+  flex-shrink: 0;
+}
+
+.macos-traffic-light.close {
+  background: #ff5f57;
+  border: 1px solid rgba(0,0,0,0.2);
+}
+.macos-traffic-light.minimize {
+  background: #febc2e;
+  border: 1px solid rgba(0,0,0,0.2);
+}
+.macos-traffic-light.maximize {
+  background: #28c840;
+  border: 1px solid rgba(0,0,0,0.2);
+}
+
+.macos-traffic-light:hover {
+  filter: brightness(1.25);
+}
+.macos-traffic-light:active {
+  filter: brightness(0.85);
+}
+
+/* ============================================================
+   WINDOW TITLEBAR CENTERING (for all window types)
+   ============================================================ */
+.timer-titlebar,
+.stopwatch-titlebar {
+  position: relative;
+}
+
+.timer-title-text,
+.stopwatch-title-text {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: rgba(224, 247, 255, 0.9);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ============================================================
+   WINDOW ANIMATIONS (minimize, maximize, drag, resize)
+   ============================================================ */
+.timer-window,
+.stopwatch-window {
+  transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center bottom;
+}
+
+.is-minimized {
+  transform: scale(0.08) translateY(100vh) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.is-dragging,
+.is-resizing {
+  transition: none !important;
+}
+
+.is-closing-fade {
+  opacity: 0 !important;
+  transform: scale(0.95) !important;
+  transition: opacity 0.32s ease, transform 0.32s ease !important;
+}
+
+/* ============================================================
+   WINDOW POSITIONAL SETUP
+   ============================================================ */
+.timer-window {
+  --chrono-accent: #ff8c00;
+  --chrono-accent-glow: rgba(255, 140, 0, 0.5);
+  position: absolute;
+  z-index: 10000;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 140, 0, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  overflow: hidden;
+  user-select: none;
+}
+
+.stopwatch-window {
+  --stop-accent: #00e676;
+  --stop-accent-glow: rgba(0, 230, 118, 0.4);
+  position: absolute;
+  z-index: 10000;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 230, 118, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ============================================================
+   TIMER WINDOW STYLES
+   ============================================================ */
+.timer-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 12px;
+  background: rgba(255, 140, 0, 0.05);
+  border-bottom: 1px solid rgba(255, 140, 0, 0.15);
+  cursor: default;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.timer-active .timer-titlebar {
+  box-shadow: 0 1px 0 rgba(255, 140, 0, 0.3);
+}
+
+.timer-ring-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0 8px;
+  flex-shrink: 0;
+}
+
+.timer-svg {
+  width: 180px;
+  height: 180px;
+}
+
+.timer-ring-track {
+  fill: none;
+  stroke: rgba(255, 140, 0, 0.12);
+  stroke-width: 6;
+}
+
+.timer-ring-progress {
+  fill: none;
+  stroke: #ff8c00;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s linear, stroke 0.3s;
+  filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.6));
+}
+
+.timer-ring-done { stroke: #ff3d00; }
+
+.timer-display-text {
+  position: absolute;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ffd27a;
+  text-shadow: 0 0 20px rgba(255, 140, 0, 0.2);
+  transition: color 0.3s, text-shadow 0.3s;
+}
+
+.timer-running-glow {
+  color: #ffb300;
+  text-shadow: 0 0 30px rgba(255, 160, 0, 0.7), 0 0 8px rgba(255, 200, 0, 0.5);
+  animation: timerPulse 1.5s ease-in-out infinite;
+}
+.timer-done-pulse {
+  color: #ff4040;
+  animation: donePulse 0.8s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+@keyframes donePulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(255, 60, 60, 0.8); }
+  50% { text-shadow: 0 0 40px rgba(255, 100, 100, 1); }
+}
+
+.timer-state-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 18px;
+  flex-shrink: 0;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+
+.timer-state-label {
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  color: rgba(255, 180, 80, 0.75);
+  text-transform: uppercase;
+}
+.timer-state-idle {
+  color: rgba(255, 180, 80, 0.35);
+}
+.timer-done-label {
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  color: #ff5050;
+  text-transform: uppercase;
+}
+
+.timer-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px 8px;
+  flex-shrink: 0;
+}
+
+.timer-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.timer-num-input {
+  width: 60px;
+  text-align: center;
+  background: rgba(255, 140, 0, 0.07);
+  border: 1px solid rgba(255, 140, 0, 0.25);
+  color: #ffd27a;
+  border-radius: 8px;
+  padding: 6px 4px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  outline: none;
+}
+.timer-num-input::-webkit-inner-spin-button { display: none; }
+.timer-num-input:focus { border-color: rgba(255,140,0,0.6); }
+
+.timer-input-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(255, 180, 80, 0.7);
+  text-transform: uppercase;
+  cursor: default;
+}
+.timer-colon {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 24px;
+  color: rgba(255, 140, 0, 0.5);
+  padding-bottom: 14px;
+}
+
+.timer-controls {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.timer-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.timer-btn-start { background: rgba(255,140,0,0.2); border-color: rgba(255,140,0,0.4); color: #ffd27a; }
+.timer-btn-start:hover { background: rgba(255,140,0,0.35); box-shadow: 0 0 14px rgba(255,140,0,0.3); }
+.timer-btn-pause { background: rgba(255,180,0,0.2); border-color: rgba(255,180,0,0.4); color: #ffe082; }
+.timer-btn-pause:hover { background: rgba(255,180,0,0.35); }
+.timer-btn-reset { background: rgba(255,60,60,0.15); border-color: rgba(255,60,60,0.35); color: #ff8080; }
+.timer-btn-reset:hover { background: rgba(255,60,60,0.28); }
+.timer-btn-set { background: rgba(100,200,255,0.15); border-color: rgba(100,200,255,0.35); color: #93e8ff; }
+.timer-btn-set:hover { background: rgba(100,200,255,0.28); }
+.timer-btn:disabled { opacity: 0.35; cursor: default; }
+
+.timer-voice-hint {
+  font-size: 9px;
+  color: rgba(255, 180, 80, 0.4);
+  text-align: center;
+  padding: 0 16px 12px;
+  letter-spacing: 0.6px;
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+.timer-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+}
+.timer-resize-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 8px 8px;
+  border-color: transparent transparent rgba(255,140,0,0.3) transparent;
+}
+
+.timer-window.timer-active {
+  border-color: rgba(255, 140, 0, 0.45);
+  box-shadow: 0 0 30px rgba(255, 140, 0, 0.18), 0 8px 40px rgba(0,0,0,0.9);
+}
+
+/* ============================================================
+   STOPWATCH WINDOW STYLES
+   ============================================================ */
+.stopwatch-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 12px;
+  background: rgba(0, 230, 118, 0.05);
+  border-bottom: 1px solid rgba(0, 230, 118, 0.15);
+  cursor: default;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.stopwatch-ring-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0 8px;
+  flex-shrink: 0;
+}
+
+.stopwatch-svg {
+  width: 200px;
+  height: 200px;
+}
+
+.stopwatch-ring-track {
+  fill: none;
+  stroke: rgba(0, 230, 118, 0.12);
+  stroke-width: 6;
+}
+
+.stopwatch-ring-progress {
+  fill: none;
+  stroke: #00e676;
+  stroke-width: 6;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 8px rgba(0, 230, 118, 0.6));
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.stopwatch-display-text {
+  position: absolute;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #80ffb4;
+}
+
+.stopwatch-running-glow {
+  color: #00e676;
+  text-shadow: 0 0 20px rgba(0, 230, 118, 0.7);
+}
+
+.stopwatch-state-label {
+  position: absolute;
+  bottom: 20px;
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  color: rgba(0, 230, 118, 0.6);
+  text-transform: uppercase;
+}
+
+.stopwatch-laps-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px;
+  min-height: 0;
+}
+
+.stopwatch-laps-header {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(0, 230, 118, 0.5);
+  border-bottom: 1px solid rgba(0, 230, 118, 0.1);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.stopwatch-laps-list { display: flex; flex-direction: column; gap: 3px; }
+
+.stopwatch-lap-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(0, 230, 118, 0.75);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.stopwatch-lap-row:hover { background: rgba(0, 230, 118, 0.06); }
+.lap-num { color: rgba(0, 230, 118, 0.4); }
+.lap-time { font-family: 'Orbitron', sans-serif; }
+
+.stopwatch-controls {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stopwatch-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+.stopwatch-btn-start { background: rgba(0,230,118,0.15); border-color: rgba(0,230,118,0.35); color: #80ffb4; }
+.stopwatch-btn-start:hover { background: rgba(0,230,118,0.28); }
+.stopwatch-btn-pause { background: rgba(255,210,0,0.15); border-color: rgba(255,210,0,0.35); color: #ffe082; }
+.stopwatch-btn-pause:hover { background: rgba(255,210,0,0.28); }
+.stopwatch-btn-lap { background: rgba(100,200,255,0.12); border-color: rgba(100,200,255,0.3); color: #93e8ff; }
+.stopwatch-btn-lap:hover:not(:disabled) { background: rgba(100,200,255,0.25); }
+.stopwatch-btn-reset { background: rgba(255,60,60,0.12); border-color: rgba(255,60,60,0.3); color: #ff8080; }
+.stopwatch-btn-reset:hover { background: rgba(255,60,60,0.25); }
+.stopwatch-btn:disabled { opacity: 0.35; cursor: default; }
+
+.stopwatch-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+}
+.stopwatch-resize-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 8px 8px;
+  border-color: transparent transparent rgba(0,230,118,0.3) transparent;
+}
+
+.stopwatch-window.stopwatch-active {
+  border-color: rgba(0, 230, 118, 0.45);
+  box-shadow: 0 0 30px rgba(0, 230, 118, 0.15), 0 8px 40px rgba(0,0,0,0.9);
+}
+
+/* ============================================================
+   MacOS-STYLE DOCK — Floating, monochromatic, HUD-themed
+   ============================================================ */
+
+/* Trigger zone: invisible strip at bottom handles hover detection */
+.neo-dock {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  width: fit-content;
+  /* Extend touch zone upward */
+  padding-top: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* The actual visible pill — floating above bottom edge */
+.neo-dock-inner {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  padding: 10px 16px 12px;
+  /* Cyan-tinted, dark, glass */
+  background: rgba(8, 20, 34, 0.72);
+  backdrop-filter: blur(40px) saturate(1.6);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  border: 1px solid rgba(0, 242, 255, 0.12);
+  border-radius: 22px;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(0, 242, 255, 0.04) inset,
+    0 1px 0 rgba(0, 242, 255, 0.08) inset;
+  /* Hidden below bottom edge by default */
+  opacity: 0;
+  transform: translateY(calc(100% + 12px));
+  transition: opacity 0.28s ease, transform 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Allow icons to lift without being clipped */
+  overflow: visible;
+  margin-bottom: 8px;
+}
+
+/* Show when parent is hovered */
+.neo-dock:hover .neo-dock-inner {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Icon base — NO scaling that causes overflow, lift only */
+.dock-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  /* Icons lift vertically on hover via inner bg transform */
+  transition: none;
+  outline: none;
+}
+
+/* The square with icon inside */
+.dock-icon-bg {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(0, 242, 255, 0.06);
+  border: 1px solid rgba(0, 242, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 242, 255, 0.6);
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dock-icon-bg svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Lift only the bg — not the entire icon so label stays put */
+.dock-icon:hover .dock-icon-bg {
+  transform: translateY(-10px);
+  background: rgba(0, 242, 255, 0.12);
+  border-color: rgba(0, 242, 255, 0.3);
+  color: rgba(0, 242, 255, 0.95);
+  box-shadow:
+    0 8px 24px rgba(0, 242, 255, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Active (minimized app) icon — slightly highlighted */
+.dock-icon.dock-icon-active .dock-icon-bg {
+  background: rgba(0, 242, 255, 0.1);
+  border-color: rgba(0, 242, 255, 0.22);
+  color: rgba(0, 242, 255, 0.8);
+}
+
+/* Action icons (settings, hide) — slightly different tint */
+.dock-icon.dock-icon-action .dock-icon-bg {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(200, 230, 255, 0.5);
+}
+
+.dock-icon.dock-icon-action:hover .dock-icon-bg {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(200, 230, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dock-label {
+  display: none;
+}
+
+/* Separator between groups */
+.dock-separator {
+  width: 1px;
+  height: 36px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 242, 255, 0.18), transparent);
+  margin: 0 2px;
+  align-self: center;
+}
+
+/* Running indicator dot */
+.dock-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #00f2ff;
+  box-shadow: 0 0 6px #00f2ff;
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: dockDotPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes dockDotPulse {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.3); box-shadow: 0 0 10px #00f2ff; }
+}
+
+
+/* ============================================================
+   TIMER — Set area (input + SET button cleanly separated)
+   ============================================================ */
+.timer-set-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 10px;
+  flex-shrink: 0;
+}
+
+.timer-input-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+}
+
+
+
+/* Unified Window Resize Handle */
+.window-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, var(--neon-cyan) 50%);
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.window-resize-handle:hover {
+  opacity: 0.8;
+}
+
+/* Interaction Overrides */
+.is-dragging, .is-resizing {
+  transition: none !important;
+}
+.is-dragging *, .is-resizing * {
+  transition: none !important;
+}
+
