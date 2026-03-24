@@ -2,13 +2,18 @@
 
 NeoCore Vo2 Public is a great desktop AI tool made by Cherry Valentine. It lives on your PC and gives you a fast local HUD-style interface for chatting, running commands, using agent workflows, and interacting with your machine from a futuristic desktop command layer.
 
+
+
+
 ## What It Is
 
 NeoCore is a Windows desktop HUD-style AI assistant built to feel like an advanced on-device command layer.
 
+![WhatsApp Image 2026-03-24 at 10 14 08 PM](https://github.com/user-attachments/assets/ba465bb1-4f90-4c83-b24d-185d3daf920f)
+
 It is designed around the idea of a tactical HUD AI, with an AI council system that includes another AI named `Ultron` as part of the council. The experience is meant to feel like a powerful desktop intelligence system sitting on top of your PC.
 
-NeoCore runs locally on your computer and is designed to be fast, practical, and easy to launch once set up.
+NeoCore runs on cloud or locally on your computer(preference based) and is designed to be fast, practical, and easy to launch once set up.
 
 ## Core Capabilities
 
